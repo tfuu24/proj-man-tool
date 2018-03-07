@@ -1,41 +1,78 @@
 window.onload = initApp;
 
+var projects = [];
+var issues = [];
+var users = [];
+var sprints = [];
+
+
 function initApp() {
     console.log('app loaded..');
 
-    var users = createMockedUsers(2);
+    createMockedUsers(2);
+    console.log('list of users is : ', users);
 
     console.log('creating project...');
     var project1 = createProject();
     console.log('created project: ', project1);
+    projects.push(project1);
+    console.log('list of projects is : ', projects);
 
-    var sprints = createMockedSprints(4);
+    createMockedSprints(4);
+    console.log('list of sprints is : ', sprints);
 
-    project1 = addSprintToProject(project1, sprints[0].id);
-    console.log('project after adding sprint: ', project1);
+    addSprintToProject(projects[0], sprints[0].id);
+    console.log('project after adding sprint: ', projects);
 
-    project1 = addSprintToProject(project1, sprints[2].id);
-    console.log('project after adding sprint: ', project1);
+    addSprintToProject(projects[0], sprints[3].id);
+    console.log('project after adding sprint: ', projects);
 
     console.log('creating issue...');
-    var bug = createIssue(issueTypes.BUG, "bug 1", sprints[0].id, users[0].id, users[1].id, "mega important bug", [], []);
-    console.log('created issue: ', bug);
+    createIssue(issueTypes.BUG, "bug 1", sprints[0].id, users[0].id, users[1].id, "mega important bug", [], []);
+    console.log('list of issues is: ', issues);
 
     console.log('creating issue...');
-    var task = createIssue(issueTypes.TASKS, "task 1", sprints[0].id, users[0].id, users[1].id, "some task", [], []);
-    console.log('created issue: ', task);
+    createIssue(issueTypes.FEATURES, "features 1", sprints[0].id, users[0].id, users[1].id, "mega important feature", [], []);
+    console.log('list of issues is: ', issues);
 
-    bug = addSubTask(bug, task.id);
-    console.log('after adding subtask ', bug);
+    console.log('creating issue...');
+    createIssue(issueTypes.TASKS, "tasks 1", sprints[0].id, users[0].id, users[1].id, "mega important task", [], []);
+    console.log('list of issues is: ', issues);
 
-    bug = addSprintToIssue(bug, sprints[1].id);
-    console.log('issue 1 after assigning a sprint ', bug);
+    console.log('creating issue...');
+    createIssue(issueTypes.TASKS, "tasks 2", sprints[0].id, users[0].id, users[1].id, "task", [], []);
+    console.log('list of issues is: ', issues);
 
-    console.log('changing status of bug...');
-    bug = changeStatus(bug, statuses.IN_PROGRESS);
-    console.log('bug after changing status ', bug);
+    addSprintToIssue(issues[0], sprints[1].id);
+    console.log('list of issues is : ', issues);
 
-    getIssue([bug, task], 1);
+    console.log('adding subtask...');
+    addSubTask(issues[0], 3);
+    console.log('list of issues is : ', issues);
+
+    console.log('adding subtask...');
+    addSubTask(issues[0], 4);
+    console.log('list of issues is : ', issues);
+
+    console.log('changing status of task...');
+    changeStatus(issues[0], statuses.READY_FOR_TESTING);
+    console.log('issues after changing status :' , issues);
+
+    console.log('changing status of task...');
+    changeStatus(issues[1], statuses.RESOLVED);
+    console.log('issues after changing status :' , issues);
+
+    console.log('changing status of task...');
+    changeStatus(issues[0], statuses.IN_PROGRESS);
+    console.log('issues after changing status :' , issues);
+
+    console.log('changing status of task...');
+    changeStatus(issues[3], statuses.READY_FOR_TESTING, 1);
+    console.log('issues after changing status :' , issues);
+
+    console.log('changing status of task...');
+    changeStatus(issues[2], statuses.READY_FOR_TESTING, 1);
+    console.log('issues after changing status :' , issues);
 }
 
 // USER API
@@ -50,16 +87,13 @@ function createUser(userName) {
 }
 
 function createMockedUsers(userNo) {
-    var usersList = [];
     for (var i = 0; i < userNo; i++) {
         console.log('creating user...');
         var userId = i + 1;
         var createdUser = createUser(`User` + userId);
         console.log('created user: ', createdUser);
-        usersList.push(createdUser);
+        users.push(createdUser);
     }
-
-    return usersList;
 }
 
 
@@ -85,23 +119,17 @@ function createSprint(sprintName) {
 }
 
 function createMockedSprints(sprintsNo) {
-    var sprintsList = [];
     for (var i = 0; i < sprintsNo; i++) {
         console.log('creating sprint...');
         var sprintId = i + 1;
         var createdSprint = createSprint('Sprint ' + sprintId);
         console.log('created sprint: ', createdSprint);
-        sprintsList.push(createdSprint);
+        sprints.push(createdSprint);
     }
-
-    return sprintsList;
 }
 
 function addSprintToProject(project, sprintId) {
-    return {
-        ...project,
-        sprints: [...project.sprints, sprintId]
-    }
+    project.sprints = [...project.sprints, sprintId];
 }
 
 // STATUS API
@@ -134,7 +162,7 @@ function createIssue(type,
                      comments = []) {
     issueIdSequence += 1;
 
-    return {
+    issues.push({
         id: issueIdSequence,
         type: issueTypes[type],
         sprint: sprintId,
@@ -146,43 +174,63 @@ function createIssue(type,
         comments,
         updatedAt: new Date(),
         createdAt: new Date()
-    }
+    });
 }
 
 function addSubTask(issue, taskId) {
-    if (issue.type === issueTypes.TASKS) {
-        throw "cannot add a subtask to a " + issueTypes.TASKS + " type of task"
+    if (issue.id === taskId) {
+        throw "cannot assign a child task to itself";
     }
 
-    return {
-        ...issue,
-        tasks: [...issue.tasks, taskId],
-        updatedAt: new Date()
+    if (issue.type === issueTypes.TASKS) {
+        throw "cannot add a subtask to a " + issueTypes.TASKS + " type of task";
     }
+
+    var subtask = getIssue(taskId);
+    if (subtask.type !== issueTypes.TASKS) {
+        throw "cannot add a subtask of type " + subtask.type + " to a " + issue.type;
+    }
+
+    issue.tasks = [...issue.tasks, taskId];
+    issue.updatedAt = new Date();
 }
 
 function addSprintToIssue(issue, sprintId) {
-    return {
-        ...issue,
-        sprint: sprintId
+    issue.sprint = sprintId;
+}
+
+function changeStatus(issue, status, parentId) {
+    issue.status = status;
+
+    if (status === statuses.READY_FOR_TESTING && parentId) {
+        // find parent of issue
+        var parentIssue = getIssue(parentId);
+
+        // verify all children of parent issue
+        var isParentReadyForTesting = true;
+        parentIssue.tasks.forEach(function (taskId) {
+            var childIssue = getIssue(taskId);
+            if (childIssue.status !== statuses.READY_FOR_TESTING) {
+                isParentReadyForTesting = false;
+            }
+        });
+
+        if (isParentReadyForTesting) {
+            parentIssue.status = statuses.READY_FOR_TESTING;
+        }
     }
 }
 
-function changeStatus(issue, status) {
-    return {
-        ...issue,
-        status
-    }
-}
-
-
-function getIssue(issues, issueId) {
-    var foundIssue = issues.filter(function (issue) {
+function getIssue(issueId) {
+    var foundIssueList = issues.filter(function (issue) {
         return issue.id === issueId
     });
 
-    console.log('found parent issue of ' + issueId + " => ", foundIssue);
-    return {
-
+    if (foundIssueList.length === 0) {
+        console.log('could not find issue with id ', issueId);
+        return;
     }
+
+    console.log('found issue with id => ' + issueId + " => ", foundIssueList[0]);
+    return foundIssueList[0];
 }
