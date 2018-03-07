@@ -35,16 +35,13 @@ function initApp() {
     createIssue(issueTypes.FEATURES, "features 1", sprints[0].id, users[0].id, users[1].id, "mega important feature", [], []);
     console.log('list of issues is: ', issues);
 
-    console.log('creating issue...');
-    createIssue(issueTypes.TASKS, "tasks 1", sprints[0].id, users[0].id, users[1].id, "mega important task", [], []);
+    console.log('creating issue... task 1');
+    createIssue(issueTypes.TASKS, "tasks 1", null, users[0].id, users[1].id, "mega important task", [], []);
     console.log('list of issues is: ', issues);
 
     console.log('creating issue...');
-    createIssue(issueTypes.TASKS, "tasks 2", sprints[0].id, users[0].id, users[1].id, "task", [], []);
+    createIssue(issueTypes.TASKS, "tasks 2", null, users[0].id, users[1].id, "task", [], []);
     console.log('list of issues is: ', issues);
-
-    addSprintToIssue(issues[0], sprints[1].id);
-    console.log('list of issues is : ', issues);
 
     console.log('adding subtask...');
     addSubTask(issues[0], 3);
@@ -56,23 +53,78 @@ function initApp() {
 
     console.log('changing status of task...');
     changeStatus(issues[0], statuses.READY_FOR_TESTING);
-    console.log('issues after changing status :' , issues);
+    console.log('issues after changing status :', issues);
 
     console.log('changing status of task...');
     changeStatus(issues[1], statuses.RESOLVED);
-    console.log('issues after changing status :' , issues);
+    console.log('issues after changing status :', issues);
 
     console.log('changing status of task...');
     changeStatus(issues[0], statuses.IN_PROGRESS);
-    console.log('issues after changing status :' , issues);
+    console.log('issues after changing status :', issues);
 
     console.log('changing status of task...');
     changeStatus(issues[3], statuses.READY_FOR_TESTING, 1);
-    console.log('issues after changing status :' , issues);
+    console.log('issues after changing status :', issues);
 
     console.log('changing status of task...');
     changeStatus(issues[2], statuses.READY_FOR_TESTING, 1);
-    console.log('issues after changing status :' , issues);
+    console.log('issues after changing status :', issues);
+
+    addSprintToIssue(issues[0], sprints[2].id);
+    console.log('list of issues is : ', issues);
+
+    createProjectElement();
+}
+
+function issuesStatusOverview(newProject) {
+    Object.keys(statuses).forEach(function (statusKey) {
+        // filter each issue by its status
+        var filteredIssues = issues.filter(function (issue) {
+            return issue.status === statuses[statusKey]
+        });
+        var issuesDescription = document.createElement("div");
+        issuesDescription.innerHTML = statusKey;
+
+        newProject.appendChild(issuesDescription);
+        filteredIssues.forEach(function (filteredIssue) {
+            var singleIssue = document.createElement("div");
+            singleIssue.innerHTML = filteredIssue.description;
+            issuesDescription.appendChild(singleIssue);
+        });
+        console.log("issues with status: ", statusKey, issues.filter(issue => issue.status === statuses[statusKey]))
+    })
+}
+
+function issuesTypeOverview(newProject, issueType) {
+    var issueTypeDescription = document.createElement("div");
+    issueTypeDescription.innerHTML = "how many " + issueType;
+    newProject.appendChild(issueTypeDescription);
+    var filteredIssues = issues.filter(function (issue) {
+        return issue.type === issueTypes[issueType]
+    });
+    filteredIssues.forEach(function (filteredIssue) {
+        var singleIssue = document.createElement("div");
+        singleIssue.innerHTML = filteredIssue.description;
+        issueTypeDescription.appendChild(singleIssue);
+    });
+}
+
+function createProjectElement() {
+    var newProject = document.createElement("div");
+    newProject.innerHTML = projects[0].id;
+    sprints.forEach(function (sprint) {
+        var newSprint = document.createElement("div");
+        newSprint.classList.add("align-sprint");
+        newSprint.innerHTML = sprint.name;
+        newProject.appendChild(newSprint);
+    });
+
+    document.getElementById("projects").appendChild(newProject);
+    issuesStatusOverview(newProject);
+    issuesTypeOverview(newProject, issueTypes.BUG);
+    issuesTypeOverview(newProject, issueTypes.FEATURES);
+    issuesTypeOverview(newProject, issueTypes.TASKS);
 }
 
 // USER API
@@ -95,7 +147,6 @@ function createMockedUsers(userNo) {
         users.push(createdUser);
     }
 }
-
 
 // PROJECT API
 var projectIdSequence = 0;
@@ -197,6 +248,11 @@ function addSubTask(issue, taskId) {
 
 function addSprintToIssue(issue, sprintId) {
     issue.sprint = sprintId;
+
+    issue.tasks.forEach(function (taskId) {
+        var subTask = getIssue(taskId);
+        addSprintToIssue(subTask, sprintId);
+    });
 }
 
 function changeStatus(issue, status, parentId) {
