@@ -5,288 +5,150 @@ var issues = [];
 var users = [];
 var sprints = [];
 
-
+// initial entry point when the DOM loads
 function initApp() {
     console.log('app loaded..');
-
-    createMockedUsers(2);
-    console.log('list of users is : ', users);
-
-    console.log('creating project...');
-    var project1 = createProject();
-    console.log('created project: ', project1);
-    projects.push(project1);
-    console.log('list of projects is : ', projects);
-
-    createMockedSprints(4);
-    console.log('list of sprints is : ', sprints);
-
-    addSprintToProject(projects[0], sprints[0].id);
-    console.log('project after adding sprint: ', projects);
-
-    addSprintToProject(projects[0], sprints[3].id);
-    console.log('project after adding sprint: ', projects);
-
-    console.log('creating issue...');
-    createIssue(issueTypes.BUG, "bug 1", sprints[0].id, users[0].id, users[1].id, "mega important bug", [], []);
-    console.log('list of issues is: ', issues);
-
-    console.log('creating issue...');
-    createIssue(issueTypes.FEATURES, "features 1", sprints[0].id, users[0].id, users[1].id, "mega important feature", [], []);
-    console.log('list of issues is: ', issues);
-
-    console.log('creating issue... task 1');
-    createIssue(issueTypes.TASKS, "tasks 1", null, users[0].id, users[1].id, "mega important task", [], []);
-    console.log('list of issues is: ', issues);
-
-    console.log('creating issue...');
-    createIssue(issueTypes.TASKS, "tasks 2", null, users[0].id, users[1].id, "task", [], []);
-    console.log('list of issues is: ', issues);
-
-    console.log('adding subtask...');
-    addSubTask(issues[0], 3);
-    console.log('list of issues is : ', issues);
-
-    console.log('adding subtask...');
-    addSubTask(issues[0], 4);
-    console.log('list of issues is : ', issues);
-
-    console.log('changing status of task...');
-    changeStatus(issues[0], statuses.READY_FOR_TESTING);
-    console.log('issues after changing status :', issues);
-
-    console.log('changing status of task...');
-    changeStatus(issues[1], statuses.RESOLVED);
-    console.log('issues after changing status :', issues);
-
-    console.log('changing status of task...');
-    changeStatus(issues[0], statuses.IN_PROGRESS);
-    console.log('issues after changing status :', issues);
-
-    console.log('changing status of task...');
-    changeStatus(issues[3], statuses.READY_FOR_TESTING, 1);
-    console.log('issues after changing status :', issues);
-
-    console.log('changing status of task...');
-    changeStatus(issues[2], statuses.READY_FOR_TESTING, 1);
-    console.log('issues after changing status :', issues);
-
-    addSprintToIssue(issues[0], sprints[2].id);
-    console.log('list of issues is : ', issues);
-
-    createProjectElement();
+    displayProjects();
+    document.getElementById("new-project").onclick = onClickNewProject;
 }
 
+// onclick event handler for when creating a new project
+function onClickNewProject(e) {
+    window.pmApi.createProject();
+    console.log("project created...");
+    displayProjects();
+}
+
+// used to render all projects on the page
+function displayProjects() {
+    var projects = window.pmApi.getProjects();
+    document.getElementById("projects").innerHTML = "";
+    projects.forEach(project => {
+        createProjectElement(project);
+    });
+}
+
+// used for issues filtered by their status
 function issuesStatusOverview(newProject) {
-    Object.keys(statuses).forEach(function (statusKey) {
+    // iterate through all statuses possible
+    Object.keys(window.pmApi.statuses).forEach(function (statusKey) {
         // filter each issue by its status
         var filteredIssues = issues.filter(function (issue) {
-            return issue.status === statuses[statusKey]
+            return issue.status === window.pmApi.statuses[statusKey]
         });
+
         var issuesDescription = document.createElement("div");
         issuesDescription.innerHTML = statusKey;
 
+        var horizontalLine = document.createElement("hr");
+        horizontalLine.classList.add("issue-description");
+        issuesDescription.appendChild(horizontalLine);
+
         newProject.appendChild(issuesDescription);
-        filteredIssues.forEach(function (filteredIssue) {
+
+        // rendered all the filtered issues by status
+        filteredIssues.forEach(function (filteredIssue, index) {
             var singleIssue = document.createElement("div");
             singleIssue.innerHTML = filteredIssue.description;
             issuesDescription.appendChild(singleIssue);
-        });
-        console.log("issues with status: ", statusKey, issues.filter(issue => issue.status === statuses[statusKey]))
-    })
-}
-
-function issuesTypeOverview(newProject, issueType) {
-    var issueTypeDescription = document.createElement("div");
-    issueTypeDescription.innerHTML = "how many " + issueType;
-    newProject.appendChild(issueTypeDescription);
-    var filteredIssues = issues.filter(function (issue) {
-        return issue.type === issueTypes[issueType]
-    });
-    filteredIssues.forEach(function (filteredIssue) {
-        var singleIssue = document.createElement("div");
-        singleIssue.innerHTML = filteredIssue.description;
-        issueTypeDescription.appendChild(singleIssue);
-    });
-}
-
-function createProjectElement() {
-    var newProject = document.createElement("div");
-    newProject.innerHTML = projects[0].id;
-    sprints.forEach(function (sprint) {
-        var newSprint = document.createElement("div");
-        newSprint.classList.add("align-sprint");
-        newSprint.innerHTML = sprint.name;
-        newProject.appendChild(newSprint);
-    });
-
-    document.getElementById("projects").appendChild(newProject);
-    issuesStatusOverview(newProject);
-    issuesTypeOverview(newProject, issueTypes.BUG);
-    issuesTypeOverview(newProject, issueTypes.FEATURES);
-    issuesTypeOverview(newProject, issueTypes.TASKS);
-}
-
-// USER API
-var userIdSequence = 0;
-
-function createUser(userName) {
-    userIdSequence += 1;
-    return {
-        id: userIdSequence,
-        name: userName
-    }
-}
-
-function createMockedUsers(userNo) {
-    for (var i = 0; i < userNo; i++) {
-        console.log('creating user...');
-        var userId = i + 1;
-        var createdUser = createUser(`User` + userId);
-        console.log('created user: ', createdUser);
-        users.push(createdUser);
-    }
-}
-
-// PROJECT API
-var projectIdSequence = 0;
-
-function createProject() {
-    return {
-        id: projectIdSequence,
-        sprints: []
-    }
-}
-
-// SPRINT API
-var sprintIdSequence = 0;
-
-function createSprint(sprintName) {
-    sprintIdSequence += 1;
-    return {
-        id: sprintIdSequence,
-        name: sprintName
-    }
-}
-
-function createMockedSprints(sprintsNo) {
-    for (var i = 0; i < sprintsNo; i++) {
-        console.log('creating sprint...');
-        var sprintId = i + 1;
-        var createdSprint = createSprint('Sprint ' + sprintId);
-        console.log('created sprint: ', createdSprint);
-        sprints.push(createdSprint);
-    }
-}
-
-function addSprintToProject(project, sprintId) {
-    project.sprints = [...project.sprints, sprintId];
-}
-
-// STATUS API
-
-var statuses = {
-    NEW: 1,
-    IN_PROGRESS: 2,
-    FEEDBACK: 3,
-    REWORK: 4,
-    RESOLVED: 5,
-    READY_FOR_TESTING: 6
-};
-
-// ISSUES API
-
-var issueIdSequence = 0;
-var issueTypes = {
-    BUG: "BUG",
-    FEATURES: "FEATURES",
-    TASKS: "TASKS"
-};
-
-function createIssue(type,
-                     name,
-                     sprintId,
-                     createdBy,
-                     assigneeId,
-                     description,
-                     tasks,
-                     comments = []) {
-    issueIdSequence += 1;
-
-    issues.push({
-        id: issueIdSequence,
-        type: issueTypes[type],
-        sprint: sprintId,
-        createdBy,
-        assignee: assigneeId,
-        description,
-        status: statuses.NEW,
-        tasks,
-        comments,
-        updatedAt: new Date(),
-        createdAt: new Date()
-    });
-}
-
-function addSubTask(issue, taskId) {
-    if (issue.id === taskId) {
-        throw "cannot assign a child task to itself";
-    }
-
-    if (issue.type === issueTypes.TASKS) {
-        throw "cannot add a subtask to a " + issueTypes.TASKS + " type of task";
-    }
-
-    var subtask = getIssue(taskId);
-    if (subtask.type !== issueTypes.TASKS) {
-        throw "cannot add a subtask of type " + subtask.type + " to a " + issue.type;
-    }
-
-    issue.tasks = [...issue.tasks, taskId];
-    issue.updatedAt = new Date();
-}
-
-function addSprintToIssue(issue, sprintId) {
-    issue.sprint = sprintId;
-
-    issue.tasks.forEach(function (taskId) {
-        var subTask = getIssue(taskId);
-        addSprintToIssue(subTask, sprintId);
-    });
-}
-
-function changeStatus(issue, status, parentId) {
-    issue.status = status;
-
-    if (status === statuses.READY_FOR_TESTING && parentId) {
-        // find parent of issue
-        var parentIssue = getIssue(parentId);
-
-        // verify all children of parent issue
-        var isParentReadyForTesting = true;
-        parentIssue.tasks.forEach(function (taskId) {
-            var childIssue = getIssue(taskId);
-            if (childIssue.status !== statuses.READY_FOR_TESTING) {
-                isParentReadyForTesting = false;
+            singleIssue.classList.add('align-list-elements');
+            if (index === filteredIssues.length - 1) {
+                issuesDescription.classList.add("issue-last-element");
             }
         });
 
-        if (isParentReadyForTesting) {
-            parentIssue.status = statuses.READY_FOR_TESTING;
-        }
-    }
+        console.log("issues with status: ", statusKey, issues.filter(issue => issue.status === window.pmApi.statuses[statusKey]))
+    })
 }
 
-function getIssue(issueId) {
-    var foundIssueList = issues.filter(function (issue) {
-        return issue.id === issueId
+// display issues filtered by type
+function issuesTypeOverview(newProject, issueType) {
+    var issueTypeDescription = document.createElement("div");
+    issueTypeDescription.innerHTML = issueType;
+    newProject.appendChild(issueTypeDescription);
+    var filteredIssues = issues.filter(function (issue) {
+        return issue.type === window.pmApi.issueTypes[issueType]
     });
+    var horizontalLine = document.createElement("hr");
+    horizontalLine.classList.add("issue-description");
+    issueTypeDescription.appendChild(horizontalLine);
 
-    if (foundIssueList.length === 0) {
-        console.log('could not find issue with id ', issueId);
-        return;
-    }
+    // render all filtered issues by type
+    filteredIssues.forEach(function (filteredIssue, index) {
+        var singleIssue = document.createElement("div");
+        singleIssue.innerHTML = filteredIssue.description;
+        issueTypeDescription.appendChild(singleIssue);
+        if (index === filteredIssues.length - 1) {
+            singleIssue.classList.add("issue-last-element");
+        }
+    });
+}
 
-    console.log('found issue with id => ' + issueId + " => ", foundIssueList[0]);
-    return foundIssueList[0];
+// create a title for each type of filtered issues
+function createTitle(project, titleName) {
+    var typeOverviewTitle = document.createElement("h5");
+    typeOverviewTitle.innerHTML = titleName;
+    project.appendChild(typeOverviewTitle);
+}
+
+// injects project tags into the DOM
+function createProjectElement(project) {
+    // header for each project
+    var newProject = document.createElement("div");
+    var newProjectTitle = document.createElement("div");
+    newProjectTitle.innerHTML = "Project id: " + project.id;
+    newProject.id = "project-" + project.id;
+    newProjectTitle.classList.add("project-description");
+    newProject.appendChild(newProjectTitle);
+
+    // display sprint creation form
+    var sprintNameInput = document.createElement("input");
+    newProject.appendChild(sprintNameInput);
+    sprintNameInput.id = "sprintNameInput-" + project.id;
+    sprintNameInput.placeholder = "sprint name...";
+    sprintNameInput.classList.add("form-control");
+    var addNewSprint = document.createElement("button");
+    addNewSprint.innerHTML = "Create new sprint";
+    addNewSprint.classList.add("btn-secondary");
+    newProject.appendChild(addNewSprint);
+    var sprintsSection = document.createElement("div");
+    sprintsSection.id = "sprints-" + project.id;
+    newProject.appendChild(sprintsSection);
+
+    // display the sprints section (when initially loading the page or refreshing)
+    displaySprint(project.id, sprintsSection);
+    addNewSprint.onclick = function (e) {
+        var sprintNameText = document.getElementById("sprintNameInput-" + project.id).value;
+
+        // create the sprint, then recreate the sprint section part so that
+        // it rerenders when clicking the add sprint button
+        window.pmApi.createSprint(sprintNameText, project.id);
+        displaySprint(project.id, sprintsSection);
+    };
+
+    document.getElementById("projects").appendChild(newProject);
+
+    createTitle(newProject, "ISSUES BY STATUS");
+    issuesStatusOverview(newProject);
+    createTitle(newProject, "ISSUES BY TYPE");
+    issuesTypeOverview(newProject, window.pmApi.issueTypes.BUG);
+    issuesTypeOverview(newProject, window.pmApi.issueTypes.FEATURES);
+    issuesTypeOverview(newProject, window.pmApi.issueTypes.TASKS);
+}
+
+// used to display the sprint section
+function displaySprint(projectId, sprintsSection) {
+    sprintsSection.innerHTML = "";
+    var filteredSprints = window.pmApi.getSprints(projectId);
+
+    // after fetching the sprints belonging to this project, render them
+    filteredSprints.forEach(function (sprint) {
+        var newSprint = document.createElement("div");
+        var newSprintDescription = document.createElement("a");
+        newSprintDescription.href = "./sprints.html?sprintId=" + sprint.id;
+        newSprint.classList.add("align-list-elements");
+        newSprintDescription.innerHTML = sprint.name;
+        newSprint.appendChild(newSprintDescription);
+        sprintsSection.appendChild(newSprint);
+    });
 }

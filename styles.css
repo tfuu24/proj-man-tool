@@ -1,0 +1,21 @@
+h2, h5 {
+    text-align: center;
+}
+
+.align-list-elements {
+    margin-left: 20px;
+}
+
+.issue-last-element {
+    margin-bottom: 40px;
+}
+
+.issue-description {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.project-description {
+    margin: 20px;
+    font-size: 19px;
+}
